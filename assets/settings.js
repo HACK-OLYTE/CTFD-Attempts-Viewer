@@ -19,7 +19,6 @@ fetch('/plugins/ctfd-attempts-viewer/api/settings')
   .then(configs => {
     const showMainButton = configs.show_main_button;
 
-    // Partie bouton principal "Historique général"
     if (showMainButton && window.location.pathname === "/challenges") {
       const container = document.querySelector('.row > .col-md-12');
       if (container && !document.querySelector('#btn-attempts-page')) {
@@ -67,7 +66,7 @@ document.addEventListener("DOMContentLoaded", function () {
         <div class="modal-dialog modal-xl">
           <div class="modal-content">
             <div class="modal-header d-flex justify-content-between align-items-center">
-              <h5 class="modal-title m-0" id="attemptsModalLabel">Mes tentatives</h5>
+              <h5 class="modal-title m-0" id="attemptsModalLabel">Mes tentatives <span id="challengeNameSpan"></span></h5>
               <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
                 Quitter
               </button>
@@ -107,7 +106,9 @@ document.addEventListener("DOMContentLoaded", function () {
 // --- Fonction showAttempts() ---
 function showAttempts() {
   const modalBody = document.getElementById("attemptsContent");
+  const challengeNameSpan = document.getElementById("challengeNameSpan");
   modalBody.innerHTML = "<p>Chargement...</p>";
+  challengeNameSpan.textContent = "";
 
   let challengeId = null;
 
@@ -116,7 +117,6 @@ function showAttempts() {
     const lastPart = parts[parts.length - 1];
     if (!isNaN(parseInt(lastPart))) {
       challengeId = parseInt(lastPart);
-      // console.log("✅ ID trouvé dans l'URL (hash):", challengeId);
     }
   }
 
@@ -135,9 +135,13 @@ function showAttempts() {
         attempts.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         if (attempts.length === 0) {
-          modalBody.innerHTML = '<p class="text-center my-3">Aucune tentative pour ce challenge.</p>';
+          modalBody.innerHTML = '<p class="text-center my-3">Aucune tentative pour le challenge.</p>';
+          challengeNameSpan.textContent = "";
           return;
         }
+
+        // Mettre à jour le nom du challenge
+        challengeNameSpan.textContent = `- ${attempts[0].challenge_name}`;
 
         const users = Array.from(new Set(attempts.map(sub => sub.user_name)));
 
@@ -162,16 +166,17 @@ function showAttempts() {
           const pagedData = data.slice(start, start + perPage);
 
           let tableHtml = `
-            <table class="table table-bordered">
-              <thead>
-                <tr>
-                  <th>Joueur</th>
-                  <th>Réponse tentée</th>
-                  <th>Type</th>
-                  <th>Date</th>
-                </tr>
-              </thead>
-              <tbody>
+            <div class="table-responsive">
+              <table class="table table-bordered">
+                <thead>
+                  <tr>
+                    <th>Joueur</th>
+                    <th>Réponse tentée</th>
+                    <th>Type</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
           `;
 
           pagedData.forEach(sub => {
@@ -191,7 +196,7 @@ function showAttempts() {
             `;
           });
 
-          tableHtml += `</tbody></table>`;
+          tableHtml += `</tbody></table></div>`;
 
           let paginationHtml = `<nav><ul class="pagination">`;
           for (let i = 1; i <= totalPages; i++) {
@@ -242,9 +247,11 @@ function showAttempts() {
         renderTable(attempts, 1);
       } else {
         modalBody.innerHTML = "<p>Erreur lors de la récupération des tentatives.</p>";
+        challengeNameSpan.textContent = "";
       }
     })
     .catch(() => {
       modalBody.innerHTML = "<p>Erreur réseau ou serveur.</p>";
+      challengeNameSpan.textContent = "";
     });
 }
