@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5">
+  
+  <h1 class="mb-4">Historique des tentatives -  <a href="/challenges" class="btn btn-outline-secondary">
+  ← Retour aux challenges
+</a> </h1>
+<p>Vous trouverez ci-dessous les tentatives réalisées par votre équipe sur les différents challenges au cours de l'événement.</p>  <hr>
+  <br><br>
+
+  <!-- 🔍 Barre de filtres -->
+  <div class="d-flex gap-4 flex-wrap align-items-end mb-4">
+    <div>
+      <label for="challenge-filter" class="form-label fw-bold">Filtrer par challenge :</label>
+      <select id="challenge-filter" class="form-select" style="min-width: 200px;">
+        <option value="all">Tous</option>
+      </select>
+    </div>
+
+    <div>
+      <label for="user-filter" class="form-label fw-bold">Filtrer par joueur :</label>
+      <select id="user-filter" class="form-select" style="min-width: 200px;">
+        <option value="all">Tous</option>
+      </select>
+    </div>
+
+    <div>
+      <label for="type-filter" class="form-label fw-bold">Filtrer par statut :</label>
+      <select id="type-filter" class="form-select" style="min-width: 150px;">
+        <option value="all">Tous</option>
+        <option value="correct">✅ Correct</option>
+        <option value="incorrect">❌ Incorrect</option>
+      </select>
+    </div>
+  </div>
+  <br>
+  <div id="attempts-container"></div>
+  <div id="pagination" class="mt-4"></div>
+  <br><br>
+  <footer>
+  <p style="text-align: center;">
+    <a href="https://hackolyte.fr/">
+      <img src="https://hackolyte.fr/wp-content/uploads/2024/09/cropped-cropped-logo.png" alt="Hack'olyte logo" style="height: 30px; vertical-align: middle; margin-right: 5px;">
+    </a>
+    Plugin développé par l'association <a href="https://hackolyte.fr/">Hack'olyte</a> - v1.0
+  </p>
+</footer>
+
+  <script>
+  (async () => {
+    const container = document.getElementById("attempts-container");
+    const pagination = document.getElementById("pagination");
+    const filterSelect = document.getElementById("challenge-filter");
+    const userFilter = document.getElementById("user-filter");
+    const typeFilter = document.getElementById("type-filter");
+
+    const PAGE_SIZE = 10;
+    let currentPage = 1;
+    let submissions = [];
+    let filteredSubs = [];
+
+    function renderPage(page) {
+      const start = (page - 1) * PAGE_SIZE;
+      const end = start + PAGE_SIZE;
+      const pageData = filteredSubs.slice(start, end);
+
+      container.innerHTML = `
+      <table class="table table-striped table-bordered">
+        <thead>
+          <tr>
+            <th>Joueur</th>
+            <th>Challenge</th>
+            <th>Réponse tentée</th>
+            <th>Réponse correcte ?</th>
+            <th>Date soumission</th>
+          </tr>
+        </thead>
+        <tbody>
+        ${pageData.map(sub => `
+            <tr>
+            <td>${sub.user_name}</td>
+            <td>${sub.challenge_name}</td>
+            <td>
+                ${sub.submission.includes("lat:") // Retirer clique si submit geoloc - Pour etre compatible avec plugion "geoloc" d'OZ.
+                ? `<span>${sub.submission}</span>`
+                : `
+                    <i class="fas fa-clipboard me-2 text-primary" 
+                    title="Copier"
+                    style="cursor: pointer;"
+                    onclick="navigator.clipboard.writeText('${sub.submission}')">
+                    </i>
+                    <span>${sub.submission}</span>
+                `
+                }
+            </td>
+            <td>${sub.type === "correct" ? "✅ Oui" : "❌ Non"}</td>
+            <td>${sub.date}</td>
+            </tr>
+        `).join('')}
+        </tbody>
+
+      </table>
+      `;
+
+      const totalPages = Math.ceil(filteredSubs.length / PAGE_SIZE);
+      let buttons = '';
+      for (let i = 1; i <= totalPages; i++) {
+        buttons += `<button class="btn btn-sm ${i === page ? 'btn-primary' : 'btn-outline-primary'} mx-1" onclick="window.changePage(${i})">${i}</button>`;
+      }
+      pagination.innerHTML = buttons;
+    }
+
+    function applyFilter() {
+      const selectedChallenge = filterSelect.value;
+      const selectedUser = userFilter.value;
+      const selectedType = typeFilter.value;
+
+      filteredSubs = submissions.filter(sub => {
+        const matchChallenge = selectedChallenge === "all" || sub.challenge_id.toString() === selectedChallenge;
+        const matchUser = selectedUser === "all" || sub.user_name === selectedUser;
+        const matchType = selectedType === "all" || sub.type === selectedType;
+        return matchChallenge && matchUser && matchType;
+      });
+
+      currentPage = 1;
+      renderPage(currentPage);
+    }
+
+    try {
+      const res = await fetch("/plugins/ctfd-attempts-viewer/api/my-team-submissions");
+      const result = await res.json();
+      if (!result.success || !result.data.length) {
+        container.innerHTML = `<p>Aucune tentative trouvée pour votre équipe !</p>`;
+        return;
+      }
+
+      submissions = result.data.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      // Remplir les challenges
+      const challengeMap = {};
+      submissions.forEach(sub => {
+        challengeMap[sub.challenge_id] = sub.challenge_name;
+      });
+      Object.entries(challengeMap).forEach(([id, name]) => {
+        const option = document.createElement("option");
+        option.value = id;
+        option.textContent = name;
+        filterSelect.appendChild(option);
+      });
+
+      // Remplir les users
+      const userSet = new Set(submissions.map(s => s.user_name));
+      userSet.forEach(user => {
+        const option = document.createElement("option");
+        option.value = user;
+        option.textContent = user;
+        userFilter.appendChild(option);
+      });
+
+      // Event listeners
+      filterSelect.addEventListener("change", applyFilter);
+      userFilter.addEventListener("change", applyFilter);
+      typeFilter.addEventListener("change", applyFilter);
+
+      window.changePage = function (page) {
+        currentPage = page;
+        renderPage(page);
+      };
+
+      applyFilter(); // Initial render
+
+    } catch (err) {
+      console.error("❌ Erreur API :", err);
+      container.innerHTML = `<div class="alert alert-danger">Erreur lors du chargement des données.</div>`;
+    }
+  })();
+  </script>
+</div>
+{% endblock %}

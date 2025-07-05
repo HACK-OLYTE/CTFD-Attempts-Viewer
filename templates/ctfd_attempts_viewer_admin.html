@@ -1,0 +1,78 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>Attempts Viewer - </h1>
+    
+    <br>
+    <p>Ce plugin permet aux joueurs de consulter l'historique de leurs tentatives. <br> Il ajoute :</p>
+<ul>
+    <li>Un onglet <strong>"Tentatives"</strong> dans la fenêtre modale de chaque challenge, affichant les tentatives de l'équipe pour ce challenge précis.</li>
+    <li>Il propose également un bouton <strong>"Historique de vos tentatives"</strong> sur la page des <a href="/challenges">challenges</a>, permettant de visualiser l'ensemble des tentatives réalisées durant l'événement (à activer ci-dessous).</li>
+</ul>
+
+<hr>
+<br>
+    <h4>Paramètres d'affichage :</h4>
+    <form id="attempts-settings-form">
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="showMainButton">
+            <label class="form-check-label" for="showMainButton">
+                Afficher le bouton principal (page Challenges)
+            </label>
+        </div>
+        <button type="submit" class="btn btn-primary mt-3">Sauvegarder</button>
+    </form>
+    <div id="saveMessage" class="mt-3"></div>
+</div>
+<br><br> 
+<footer>
+  <p style="text-align: center;">
+    <a href="https://hackolyte.fr/">
+      <img src="https://hackolyte.fr/wp-content/uploads/2024/09/cropped-cropped-logo.png" alt="Hack'olyte logo" style="height: 30px; vertical-align: middle; margin-right: 5px;">
+    </a>
+    Plugin développé par l'association <a href="https://hackolyte.fr/">Hack'olyte</a> - v1.0
+  </p>
+</footer>
+
+<script>
+document.getElementById("attempts-settings-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    const showMain = document.getElementById("showMainButton").checked;
+
+    const csrfToken = window.init.csrfNonce;
+
+    fetch('/plugins/ctfd-attempts-viewer/admin/save', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'CSRF-Token': csrfToken
+        },
+        body: JSON.stringify({
+            show_main_button: showMain
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById("saveMessage").innerHTML = "<span class='text-success'>Paramètres sauvegardés !</span>";
+        } else {
+            document.getElementById("saveMessage").innerHTML = "<span class='text-danger'>Erreur lors de la sauvegarde.</span>";
+        }
+    })
+    .catch(() => {
+        document.getElementById("saveMessage").innerHTML = "<span class='text-danger'>Erreur réseau ou serveur.</span>";
+    });
+});
+
+// Charger la valeur actuelle à l'ouverture
+fetch('/plugins/ctfd-attempts-viewer/api/settings')
+    .then(res => res.json())
+    .then(configs => {
+        document.getElementById("showMainButton").checked = configs.show_main_button;
+    })
+    .catch(() => {
+        document.getElementById("showMainButton").checked = false;
+    });
+</script>
+{% endblock %}
