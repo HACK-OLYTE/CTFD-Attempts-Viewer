@@ -33,7 +33,7 @@ Grâce à ce plugin, tout le monde reste concentré sur le jeu et la progression
    
    ```bash
    cd /path/to/CTFd/plugins
-   git https://github.com/HACK-OLYTE/CTFD-Attempts-Viewer.git
+   git clone https://github.com/HACK-OLYTE/CTFD-Attempts-Viewer.git
 
 3. Restart your CTFd instance to load the plugin.
 
