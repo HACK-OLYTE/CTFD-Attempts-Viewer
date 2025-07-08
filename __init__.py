@@ -105,7 +105,9 @@ def load(app):
             "user_name": row.user_name
         } for row in rows]
 
-        return jsonify({"success": True, "data": data})
+        response = jsonify({"success": True, "data": data})
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, private"
+        return response
 
     # Plugin registration
     app.register_blueprint(viewer_bp)
