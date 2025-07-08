@@ -1,4 +1,4 @@
-//console.log("✅ Attempts-viewer-js chargé (début)");
+//console.log("Attempts-viewer-js chargé (début)");
 
 // Injecter styles globaux pour les icônes copy (toujours présents)
 const style = document.createElement('style');
@@ -55,9 +55,7 @@ fetch('/plugins/ctfd-attempts-viewer/api/settings')
       }
     }
   })
-  .catch(err => {
-    //console.error("❌ Erreur lors de la récupération de la config :", err);
-  });
+  .catch(() => {});
 
 document.addEventListener("DOMContentLoaded", function () {
   if (!document.getElementById("attemptsModal")) {
@@ -103,11 +101,10 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 });
 
-// --- Fonction showAttempts() ---
 function showAttempts() {
   const modalBody = document.getElementById("attemptsContent");
   const challengeNameSpan = document.getElementById("challengeNameSpan");
-  modalBody.innerHTML = "<p>Chargement...</p>";
+  modalBody.textContent = "Chargement...";
   challengeNameSpan.textContent = "";
 
   let challengeId = null;
@@ -121,7 +118,7 @@ function showAttempts() {
   }
 
   if (!challengeId) {
-    modalBody.innerHTML = "<p>Impossible de trouver l'ID du challenge courant.</p>";
+    modalBody.textContent = "Impossible de trouver l'ID du challenge courant.";
     return;
   }
 
@@ -131,111 +128,158 @@ function showAttempts() {
       if (data.success) {
         let attempts = data.data.filter(sub => String(sub.challenge_id) === String(challengeId));
 
-        // Trier du plus récent au plus vieux
         attempts.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         if (attempts.length === 0) {
-          modalBody.innerHTML = '<p class="text-center my-3">Aucune tentative pour le challenge.</p>';
+          modalBody.textContent = "Aucune tentative pour le challenge.";
           challengeNameSpan.textContent = "";
           return;
         }
 
-        // Mettre à jour le nom du challenge
         challengeNameSpan.textContent = `- ${attempts[0].challenge_name}`;
 
+        modalBody.innerHTML = "";
+
+        const filterDiv = document.createElement("div");
+        filterDiv.className = "mb-3";
+
+        const label = document.createElement("label");
+        label.className = "form-label";
+        label.htmlFor = "userFilter";
+        label.textContent = "Filtrer par joueur :";
+
+        const select = document.createElement("select");
+        select.id = "userFilter";
+        select.className = "form-select";
+
+        const optionAll = document.createElement("option");
+        optionAll.value = "";
+        optionAll.textContent = "Tous";
+        select.appendChild(optionAll);
+
         const users = Array.from(new Set(attempts.map(sub => sub.user_name)));
+        users.forEach(u => {
+          const option = document.createElement("option");
+          option.value = u;
+          option.textContent = u;
+          select.appendChild(option);
+        });
 
-        let html = `
-          <div class="mb-3">
-            <label for="userFilter" class="form-label">Filtrer par joueur :</label>
-            <select id="userFilter" class="form-select">
-              <option value="">Tous</option>
-              ${users.map(u => `<option value="${u}">${u}</option>`).join("")}
-            </select>
-          </div>
-          <div id="attemptsTableWrapper"></div>
-        `;
+        filterDiv.appendChild(label);
+        filterDiv.appendChild(select);
+        modalBody.appendChild(filterDiv);
 
-        modalBody.innerHTML = html;
-
-        const tableWrapper = document.getElementById("attemptsTableWrapper");
+        const tableWrapper = document.createElement("div");
+        tableWrapper.id = "attemptsTableWrapper";
+        modalBody.appendChild(tableWrapper);
 
         function renderTable(data, page = 1, perPage = 5) {
           const totalPages = Math.ceil(data.length / perPage);
           const start = (page - 1) * perPage;
           const pagedData = data.slice(start, start + perPage);
 
-          let tableHtml = `
-            <div class="table-responsive">
-              <table class="table table-bordered">
-                <thead>
-                  <tr>
-                    <th>Joueur</th>
-                    <th>Réponse tentée</th>
-                    <th>Type</th>
-                    <th>Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-          `;
+          tableWrapper.innerHTML = "";
+
+          const responsiveDiv = document.createElement("div");
+          responsiveDiv.className = "table-responsive";
+
+          const table = document.createElement("table");
+          table.className = "table table-bordered";
+
+          const thead = document.createElement("thead");
+          const headRow = document.createElement("tr");
+          ["Joueur", "Réponse tentée", "Type", "Date"].forEach(header => {
+            const th = document.createElement("th");
+            th.textContent = header;
+            headRow.appendChild(th);
+          });
+          thead.appendChild(headRow);
+          table.appendChild(thead);
+
+          const tbody = document.createElement("tbody");
 
           pagedData.forEach(sub => {
+            const tr = document.createElement("tr");
+
+            const tdUser = document.createElement("td");
+            tdUser.textContent = sub.user_name;
+
+            const tdSubmission = document.createElement("td");
             const isGeo = sub.submission.includes("lat:");
-            tableHtml += `
-              <tr>
-                <td>${sub.user_name}</td>
-                <td>
-                  ${isGeo ? `<span>${sub.submission}</span>` : `
-                    <i class="fa fa-copy copy-icon" title="Copier" data-submission="${encodeURIComponent(sub.submission)}"></i>
-                    ${sub.submission}
-                  `}
-                </td>
-                <td>${sub.type}</td>
-                <td>${sub.date}</td>
-              </tr>
-            `;
-          });
+            if (isGeo) {
+              const span = document.createElement("span");
+              span.textContent = sub.submission;
+              tdSubmission.appendChild(span);
+            } else {
+              const icon = document.createElement("i");
+              icon.className = "fa fa-copy copy-icon";
+              icon.title = "Copier";
+              icon.setAttribute("data-submission", encodeURIComponent(sub.submission));
 
-          tableHtml += `</tbody></table></div>`;
-
-          let paginationHtml = `<nav><ul class="pagination">`;
-          for (let i = 1; i <= totalPages; i++) {
-            paginationHtml += `
-              <li class="page-item ${i === page ? 'active' : ''}">
-                <a class="page-link" href="#" onclick="renderAttemptsPage(event, ${i})">${i}</a>
-              </li>
-            `;
-          }
-          paginationHtml += `</ul></nav>`;
-
-          tableWrapper.innerHTML = tableHtml + paginationHtml;
-
-          // Attacher listeners copie
-          const copyIcons = tableWrapper.querySelectorAll(".copy-icon");
-          copyIcons.forEach(icon => {
-            icon.addEventListener("click", () => {
-              const text = decodeURIComponent(icon.getAttribute("data-submission"));
-              navigator.clipboard.writeText(text).then(() => {
-                icon.style.color = "#28a745";
-                setTimeout(() => {
-                  icon.style.color = "";
-                }, 1000);
+              icon.addEventListener("click", () => {
+                const text = decodeURIComponent(icon.getAttribute("data-submission"));
+                navigator.clipboard.writeText(text).then(() => {
+                  icon.style.color = "#28a745";
+                  setTimeout(() => {
+                    icon.style.color = "";
+                  }, 1000);
+                });
               });
-            });
+
+              tdSubmission.appendChild(icon);
+              tdSubmission.appendChild(document.createTextNode(" " + sub.submission));
+            }
+
+            const tdType = document.createElement("td");
+            tdType.textContent = sub.type;
+
+            const tdDate = document.createElement("td");
+            tdDate.textContent = sub.date;
+
+            tr.appendChild(tdUser);
+            tr.appendChild(tdSubmission);
+            tr.appendChild(tdType);
+            tr.appendChild(tdDate);
+
+            tbody.appendChild(tr);
           });
+
+          table.appendChild(tbody);
+          responsiveDiv.appendChild(table);
+          tableWrapper.appendChild(responsiveDiv);
+
+          const pagination = document.createElement("nav");
+          const ul = document.createElement("ul");
+          ul.className = "pagination";
+
+          for (let i = 1; i <= totalPages; i++) {
+            const li = document.createElement("li");
+            li.className = "page-item" + (i === page ? " active" : "");
+
+            const a = document.createElement("a");
+            a.className = "page-link";
+            a.href = "#";
+            a.textContent = i;
+
+            a.addEventListener("click", e => {
+              e.preventDefault();
+              const selectedUser = document.getElementById("userFilter").value;
+              let filtered = attempts;
+              if (selectedUser) {
+                filtered = attempts.filter(sub => sub.user_name === selectedUser);
+              }
+              renderTable(filtered, i);
+            });
+
+            li.appendChild(a);
+            ul.appendChild(li);
+          }
+
+          pagination.appendChild(ul);
+          tableWrapper.appendChild(pagination);
         }
 
-        window.renderAttemptsPage = (e, page) => {
-          e.preventDefault();
-          const selectedUser = document.getElementById("userFilter").value;
-          let filtered = attempts;
-          if (selectedUser) {
-            filtered = attempts.filter(sub => sub.user_name === selectedUser);
-          }
-          renderTable(filtered, page);
-        };
-
-        document.getElementById("userFilter").addEventListener("change", function () {
+        select.addEventListener("change", function () {
           const selectedUser = this.value;
           let filtered = attempts;
           if (selectedUser) {
@@ -246,12 +290,12 @@ function showAttempts() {
 
         renderTable(attempts, 1);
       } else {
-        modalBody.innerHTML = "<p>Erreur lors de la récupération des tentatives.</p>";
+        modalBody.textContent = "Erreur lors de la récupération des tentatives.";
         challengeNameSpan.textContent = "";
       }
     })
     .catch(() => {
-      modalBody.innerHTML = "<p>Erreur réseau ou serveur.</p>";
+      modalBody.textContent = "Erreur réseau ou serveur.";
       challengeNameSpan.textContent = "";
     });
 }
