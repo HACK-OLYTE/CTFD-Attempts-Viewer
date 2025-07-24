@@ -6,7 +6,9 @@
 ## Fonctionnalités principales
 
 - **Consultation des tentatives d'équipe** :
-  - Les joueurs peuvent visualiser toutes les tentatives soumises par leur équipe, challenge par challenge.
+  - Les joueurs peuvent visualiser toutes les tentatives soumises par leur équipe, challenge par challenge (TEAM MODE CTFd).
+- **Consultation des tentatives individuel** :
+  - Les joueurs peuvent visualiser toutes leurs tentatives soumises, challenge par challenge (USER MODE CTFd).
 - **Nouvel onglet "Tentatives" dans chaque challenge** :
   - Directement depuis le modal d’un challenge, l’équipe peut voir l’historique complet des soumissions liées à ce challenge.
 - **Page dédiée d’historique global** :
@@ -55,6 +57,7 @@ https://github.com/user-attachments/assets/293011ee-3942-4d98-a4ef-39c04a18a298
 - CTFd ≥ v3.x
 - Compatible avec les installations Docker et locales.
 - Un navigateur à jour et JavaScript d'activé.
+- CTFd thème : Core-beta
 
 
 ## Support
