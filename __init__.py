@@ -4,6 +4,7 @@ from CTFd.models import db
 from CTFd.utils.decorators import authed_only, admins_only
 from CTFd.utils.user import get_current_user, get_current_team
 from sqlalchemy.sql import text
+from CTFd.models import Challenges, Submissions, Users
 
 # --- Nouveau modèle dédié ---
 class AttemptsViewerSettings(db.Model):
@@ -73,28 +74,33 @@ def load(app):
         user = get_current_user()
         team = get_current_team()
 
-        if not user or not team:
+        if not user:
             return jsonify({
                 "success": False,
                 "data": [],
-                "error": "Utilisateur non connecté ou non membre d'une équipe"
+                "error": "Utilisateur non connecté"
             }), 403
 
-        sql = text("""
-            SELECT
-                submissions.challenge_id,
-                submissions.provided,
-                submissions.type,
-                submissions.date,
-                challenges.name AS challenge_name,
-                users.name AS user_name
-            FROM submissions
-            JOIN challenges ON submissions.challenge_id = challenges.id
-            JOIN users ON submissions.user_id = users.id
-            WHERE submissions.team_id = :team_id
-        """)
+        if team:
+            filter_condition = Submissions.team_id == team.id
+        else:
+            filter_condition = Submissions.user_id == user.id
 
-        rows = db.session.execute(sql, {"team_id": team.id}).fetchall()
+        
+        rows = (
+            db.session.query(
+                Submissions.challenge_id,
+                Submissions.provided,
+                Submissions.type,
+                Submissions.date,
+                Challenges.name.label("challenge_name"),
+                Users.name.label("user_name"),
+            )
+            .join(Challenges, Submissions.challenge_id == Challenges.id)
+            .join(Users, Submissions.user_id == Users.id)
+            .filter(filter_condition)
+            .all()
+        )
 
         data = [{
             "challenge_id": row.challenge_id,
