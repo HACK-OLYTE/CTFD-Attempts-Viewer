@@ -107,7 +107,7 @@ def load(app):
             "challenge_name": row.challenge_name,
             "submission": row.provided,
             "type": row.type,
-            "date": row.date.strftime('%Y-%m-%d %H:%M:%S'),
+            "date": row.date.isoformat() + 'Z',
             "user_name": row.user_name
         } for row in rows]
 
