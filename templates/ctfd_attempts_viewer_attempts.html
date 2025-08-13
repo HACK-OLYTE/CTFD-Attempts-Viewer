@@ -61,7 +61,10 @@
   let filteredSubs = [];
 
   function renderPage(page) {
-    container.innerHTML = "";
+    // Vider le container de manière sécurisée
+    while (container.firstChild) {
+      container.removeChild(container.firstChild);
+    }
 
     const start = (page - 1) * PAGE_SIZE;
     const end = start + PAGE_SIZE;
@@ -116,7 +119,8 @@
         });
 
         tdSubmission.appendChild(icon);
-        tdSubmission.appendChild(document.createTextNode(" " + sub.submission));
+        const textNode = document.createTextNode(" " + sub.submission);
+        tdSubmission.appendChild(textNode);
       }
       tr.appendChild(tdSubmission);
 
@@ -125,7 +129,7 @@
       tr.appendChild(tdType);
 
       const tdDate = document.createElement("td");
-      tdDate.textContent = sub.date;
+      tdDate.textContent = new Date(sub.date).toLocaleString();
       tr.appendChild(tdDate);
 
       tbody.appendChild(tr);
@@ -135,8 +139,11 @@
     responsiveDiv.appendChild(table);
     container.appendChild(responsiveDiv);
 
-    // Pagination
-    pagination.innerHTML = "";
+    // Pagination - vider de manière sécurisée
+    while (pagination.firstChild) {
+      pagination.removeChild(pagination.firstChild);
+    }
+    
     const totalPages = Math.ceil(filteredSubs.length / PAGE_SIZE);
 
     for (let i = 1; i <= totalPages; i++) {
@@ -208,7 +215,11 @@
 
   } catch (err) {
     console.error("❌ Erreur API :", err);
-    container.innerHTML = `<div class="alert alert-danger">Erreur lors du chargement des données.</div>`;
+    // Créer l'alerte de manière sécurisée
+    const alertDiv = document.createElement("div");
+    alertDiv.className = "alert alert-danger";
+    alertDiv.textContent = "Erreur lors du chargement des données.";
+    container.appendChild(alertDiv);
   }
 })();
 </script>
