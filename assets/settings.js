@@ -86,11 +86,16 @@ document.addEventListener("DOMContentLoaded", function () {
       if (navTabs && !navTabs.querySelector('.nav-item-tentatives')) {
         let li = document.createElement("li");
         li.className = "nav-item nav-item-tentatives";
-        li.innerHTML = `
-          <button class="nav-link" id="tentatives-btn" type="button" data-bs-toggle="modal" data-bs-target="#attemptsModal">
-            Tentatives
-          </button>
-        `;
+        
+        const button = document.createElement("button");
+        button.className = "nav-link";
+        button.id = "tentatives-btn";
+        button.type = "button";
+        button.setAttribute("data-bs-toggle", "modal");
+        button.setAttribute("data-bs-target", "#attemptsModal");
+        button.textContent = "Tentatives";
+        li.appendChild(button);
+        
         navTabs.appendChild(li);
 
         document.getElementById("tentatives-btn").addEventListener("click", showAttempts);
@@ -138,7 +143,10 @@ function showAttempts() {
 
         challengeNameSpan.textContent = `- ${attempts[0].challenge_name}`;
 
-        modalBody.innerHTML = "";
+        // Vider modalBody de manière sécurisée
+        while (modalBody.firstChild) {
+          modalBody.removeChild(modalBody.firstChild);
+        }
 
         const filterDiv = document.createElement("div");
         filterDiv.className = "mb-3";
@@ -178,7 +186,10 @@ function showAttempts() {
           const start = (page - 1) * perPage;
           const pagedData = data.slice(start, start + perPage);
 
-          tableWrapper.innerHTML = "";
+          // Vider tableWrapper de manière sécurisée
+          while (tableWrapper.firstChild) {
+            tableWrapper.removeChild(tableWrapper.firstChild);
+          }
 
           const responsiveDiv = document.createElement("div");
           responsiveDiv.className = "table-responsive";
@@ -227,14 +238,15 @@ function showAttempts() {
               });
 
               tdSubmission.appendChild(icon);
-              tdSubmission.appendChild(document.createTextNode(" " + sub.submission));
+              const textNode = document.createTextNode(" " + sub.submission);
+              tdSubmission.appendChild(textNode);
             }
 
             const tdType = document.createElement("td");
             tdType.textContent = sub.type;
 
             const tdDate = document.createElement("td");
-            tdDate.textContent = sub.date;
+            tdDate.textContent = new Date(sub.date).toLocaleString();
 
             tr.appendChild(tdUser);
             tr.appendChild(tdSubmission);
